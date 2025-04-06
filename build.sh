@@ -122,7 +122,6 @@ pushd "${META_INF_PATH}" > /dev/null
     --initialize-at-build-time=net.minecraft.util.profiling.jfr.event \
     -H:ReflectionConfigurationFiles="${CONFIG_DIR}/reflection-config.json" \
     -H:ResourceConfigurationFiles="${CONFIG_DIR}/jni-config.json" \
-    -H:JNIConfigurationFiles="${CONFIG_DIR}/resource-config.json" \
     -H:Name="${BINARY_NAME}" \
     -cp "${CLASSPATH_JOINED//;/:}" \
     "${MAIN_CLASS}"
