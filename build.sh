@@ -6,11 +6,12 @@ set -o nounset
 SERVER_JAR_DL="https://piston-data.mojang.com/v1/objects/e6ec2f64e6080b9b5d9b471b291c33cc7f509733/server.jar"
 SCRIPT_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 BUILD_DIR="${SCRIPT_DIR}/build"
+CONFIG_DIR="${SCRIPT_DIR}/configuration"
 JAR_PATH="${BUILD_DIR}/server.jar"
 META_INF_PATH="${BUILD_DIR}/META-INF"
 BINARY_NAME="native-minecraft-server"
 NI_EXEC="${GRAALVM_HOME:-}/bin/native-image"
-readonly SERVER_JAR_DL SCRIPT_DIR BUILD_DIR JAR_PATH META_INF_PATH BINARY_NAME NI_EXEC
+readonly SERVER_JAR_DL SCRIPT_DIR BUILD_DIR CONFIG_DIR JAR_PATH META_INF_PATH BINARY_NAME NI_EXEC
 
 # 检查 GraalVM 环境变量
 if [[ -z "${GRAALVM_HOME:-}" ]]; then
@@ -23,12 +24,45 @@ if ! command -v "${NI_EXEC}" &> /dev/null; then
     "${GRAALVM_HOME}/bin/gu" install --no-progress native-image
 fi
 
-# 先确保 build 目录存在
+# 确保 build 目录存在
 if [[ ! -d "${BUILD_DIR}" ]]; then
-    mkdir "${BUILD_DIR}"
+    mkdir -p "${BUILD_DIR}"
 fi
 
-# 在 BUILD_DIR 中写入 eula.txt
+# 确保 configuration 目录存在
+if [[ ! -d "${CONFIG_DIR}" ]]; then
+    mkdir -p "${CONFIG_DIR}"
+fi
+
+# 生成反射配置文件 reflection-config.json
+cat > "${CONFIG_DIR}/reflection-config.json" <<EOF
+[
+  {
+    "name": "org.apache.logging.log4j.core.config.LoggerConfig\$RootLogger",
+    "methods": [
+      {
+        "name": "newRootBuilder",
+        "parameterTypes": []
+      }
+    ]
+  }
+]
+EOF
+echo "Wrote reflection-config.json into ${CONFIG_DIR}"
+
+# 生成 JNI 配置文件 jni-config.json（根据需要补充，此处为示例）
+cat > "${CONFIG_DIR}/jni-config.json" <<EOF
+[
+  {
+    "name": "com.sun.jna.Native",
+    "methods": [],
+    "fields": []
+  }
+]
+EOF
+echo "Wrote jni-config.json into ${CONFIG_DIR}"
+
+# 在 BUILD_DIR 中写入 eula.txt（确保 server.jar 运行时能读取到）
 echo "Writing eula.txt with 'eula=true' into ${BUILD_DIR}"
 echo "eula=true" > "${BUILD_DIR}/eula.txt"
 
@@ -65,16 +99,38 @@ readonly MAIN_CLASS
 # 使用 java -jar 运行 server.jar以生成反射配置数据
 # 自动在20秒后输入 "stop" 退出服务器
 echo "Running server.jar with native-image agent to generate configuration..."
-( sleep 60; echo "stop" ) | java -agentlib:native-image-agent=config-output-dir=./configuration -jar "${JAR_PATH}" || echo "Native-image agent run completed (expected to exit)"
+( sleep 20; echo "stop" ) | java -agentlib:native-image-agent=config-output-dir=./configuration -jar "${JAR_PATH}" || echo "Native-image agent run completed (expected to exit)"
+
+# 确保 configuration 目录存在
+if [[ ! -d "${CONFIG_DIR}" ]]; then
+    mkdir -p "${CONFIG_DIR}"
+fi
+
+# 写入 reflection 配置到 reflection-config.json
+echo '[
+  {
+    "name": "org.apache.logging.log4j.core.config.LoggerConfig$RootLogger",
+    "methods": [
+      {
+        "name": "newRootBuilder",
+        "parameterTypes": []
+      }
+    ]
+  }
+]' > "${CONFIG_DIR}/reflection-config.json"
+echo "Wrote reflection-config.json into ${CONFIG_DIR}"
+
 
 echo ""
 echo "Starting native-image build..."
 echo "${NI_EXEC}" --no-fallback \
-    -H:ConfigurationFileDirectories="${SCRIPT_DIR}/configuration/" \
+    -H:ConfigurationFileDirectories="${CONFIG_DIR}" \
     --enable-url-protocols=https \
     --initialize-at-run-time=io.netty \
     -H:+AllowVMInspection \
     --initialize-at-build-time=net.minecraft.util.profiling.jfr.event \
+    -H:ReflectionConfigurationFiles="${CONFIG_DIR}/reflection-config.json" \
+    -H:JNIConfigurationFiles="${CONFIG_DIR}/jni-config.json" \
     -H:Name="${BINARY_NAME}" \
     -cp "${CLASSPATH_JOINED//;/:}" \
     "${MAIN_CLASS}"
@@ -82,11 +138,14 @@ echo "${NI_EXEC}" --no-fallback \
 # 进入 META-INF 目录进行构建
 pushd "${META_INF_PATH}" > /dev/null
 "${NI_EXEC}" --no-fallback \
-    -H:ConfigurationFileDirectories="${SCRIPT_DIR}/configuration/" \
+    -H:ConfigurationFileDirectories="${CONFIG_DIR}" \
     --enable-url-protocols=https \
     --initialize-at-run-time=io.netty \
     -H:+AllowVMInspection \
     --initialize-at-build-time=net.minecraft.util.profiling.jfr.event \
+    -H:ReflectionConfigurationFiles="${CONFIG_DIR}/reflection-config.json" \
+    -H:ResourceConfigurationFiles="${CONFIG_DIR}/jni-config.json" \
+    -H:JNIConfigurationFiles="${CONFIG_DIR}/resource-config.json" \
     -H:Name="${BINARY_NAME}" \
     -cp "${CLASSPATH_JOINED//;/:}" \
     "${MAIN_CLASS}"
