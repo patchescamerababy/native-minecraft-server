@@ -53,7 +53,7 @@ fi
 CLASSPATH_JOINED=$(cat "${META_INF_PATH}/classpath-joined")
 readonly CLASSPATH_JOINED
 
-# 获取 main class 配置
+# 获取 main class 配置（后续 native-image 构建依赖，但配置生成阶段不再使用）
 if [[ ! -f "${META_INF_PATH}/main-class" ]]; then
     echo "Unable to determine main class. Exiting..."
     exit 1
@@ -61,9 +61,9 @@ fi
 MAIN_CLASS=$(cat "${META_INF_PATH}/main-class")
 readonly MAIN_CLASS
 
-# 使用 java 运行一次，以便生成反射配置数据
-echo "Running Minecraft server with native-image agent to generate configuration..."
-java -agentlib:native-image-agent=config-output-dir=./configuration -cp "${CLASSPATH_JOINED//;/:}" "${MAIN_CLASS}" || echo "Native-image agent run completed (expected to exit prematurely)"
+# 使用 java -jar 运行 server.jar（而不是指定 main-class）以生成反射配置数据
+echo "Running server.jar with native-image agent to generate configuration..."
+java -agentlib:native-image-agent=config-output-dir=./configuration -jar "${JAR_PATH}" || echo "Native-image agent run completed (expected to exit prematurely)"
 
 echo ""
 echo "Starting native-image build..."
@@ -89,8 +89,8 @@ pushd "${META_INF_PATH}" > /dev/null
     -cp "${CLASSPATH_JOINED//;/:}" \
     "${MAIN_CLASS}"
 mv "${BINARY_NAME}" "${SCRIPT_DIR}/${BINARY_NAME}"
-popd > /dev/null # Exit META-INF
-popd > /dev/null # Exit build directory
+popd > /dev/null # 退出 META-INF 目录
+popd > /dev/null # 退出 build 目录
 
 # 如果 upx 可用，则压缩生成的二进制文件
 if command -v upx &> /dev/null; then
