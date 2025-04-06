@@ -51,6 +51,7 @@ EOF
 echo "Wrote reflection-config.json into ${CONFIG_DIR}"
 
 
+
 # 在 BUILD_DIR 中写入 eula.txt（确保 server.jar 运行时能读取到）
 echo "Writing eula.txt with 'eula=true' into ${BUILD_DIR}"
 echo "eula=true" > "${BUILD_DIR}/eula.txt"
