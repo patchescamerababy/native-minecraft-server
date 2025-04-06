@@ -34,11 +34,11 @@ if [[ ! -d "${CONFIG_DIR}" ]]; then
     mkdir -p "${CONFIG_DIR}"
 fi
 
-# 生成反射配置文件 reflection-config.json
-cat > "${CONFIG_DIR}/reflection-config.json" <<EOF
+# 写入 reflection 配置到 reflection-config.json
+cat << 'EOF' > "${CONFIG_DIR}/reflection-config.json"
 [
   {
-    "name": "org.apache.logging.log4j.core.config.LoggerConfig\$RootLogger",
+    "name": "org.apache.logging.log4j.core.config.LoggerConfig$RootLogger",
     "methods": [
       {
         "name": "newRootBuilder",
@@ -50,17 +50,6 @@ cat > "${CONFIG_DIR}/reflection-config.json" <<EOF
 EOF
 echo "Wrote reflection-config.json into ${CONFIG_DIR}"
 
-# 生成 JNI 配置文件 jni-config.json（根据需要补充，此处为示例）
-cat > "${CONFIG_DIR}/jni-config.json" <<EOF
-[
-  {
-    "name": "com.sun.jna.Native",
-    "methods": [],
-    "fields": []
-  }
-]
-EOF
-echo "Wrote jni-config.json into ${CONFIG_DIR}"
 
 # 在 BUILD_DIR 中写入 eula.txt（确保 server.jar 运行时能读取到）
 echo "Writing eula.txt with 'eula=true' into ${BUILD_DIR}"
