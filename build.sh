@@ -50,8 +50,7 @@ if [[ ! -f "${META_INF_PATH}/main-class" ]]; then
 fi
 MAIN_CLASS=$(cat "${META_INF_PATH}/main-class")
 readonly MAIN_CLASS
-echo "${META_INF_PATH}" > /dev/null
-"${NI_EXEC}" --no-fallback \
+echo "${NI_EXEC}" --no-fallback \
     -H:ConfigurationFileDirectories="${SCRIPT_DIR}/configuration/" \
     --enable-url-protocols=https \
     --initialize-at-run-time=io.netty \
