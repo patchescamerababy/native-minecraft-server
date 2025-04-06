@@ -34,22 +34,6 @@ if [[ ! -d "${CONFIG_DIR}" ]]; then
     mkdir -p "${CONFIG_DIR}"
 fi
 
-# 写入 reflection 配置到 reflection-config.json
-cat << 'EOF' > "${CONFIG_DIR}/reflection-config.json"
-[
-  {
-    "name": "org.apache.logging.log4j.core.config.LoggerConfig$RootLogger",
-    "methods": [
-      {
-        "name": "newRootBuilder",
-        "parameterTypes": []
-      }
-    ]
-  }
-]
-EOF
-echo "Wrote reflection-config.json into ${CONFIG_DIR}"
-
 
 
 # 在 BUILD_DIR 中写入 eula.txt（确保 server.jar 运行时能读取到）
@@ -97,7 +81,8 @@ if [[ ! -d "${CONFIG_DIR}" ]]; then
 fi
 
 # 写入 reflection 配置到 reflection-config.json
-echo '[
+cat << 'EOF' > "${CONFIG_DIR}/reflection-config.json"
+[
   {
     "name": "org.apache.logging.log4j.core.config.LoggerConfig$RootLogger",
     "methods": [
@@ -107,8 +92,10 @@ echo '[
       }
     ]
   }
-]' > "${CONFIG_DIR}/reflection-config.json"
+]
+EOF
 echo "Wrote reflection-config.json into ${CONFIG_DIR}"
+
 
 
 echo ""
