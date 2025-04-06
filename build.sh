@@ -23,14 +23,15 @@ if ! command -v "${NI_EXEC}" &> /dev/null; then
     "${GRAALVM_HOME}/bin/gu" install --no-progress native-image
 fi
 
+# 先确保 build 目录存在
+if [[ ! -d "${BUILD_DIR}" ]]; then
+    mkdir "${BUILD_DIR}"
+fi
+
 # 在 BUILD_DIR 中写入 eula.txt
 echo "Writing eula.txt with 'eula=true' into ${BUILD_DIR}"
 echo "eula=true" > "${BUILD_DIR}/eula.txt"
 
-# 建立 build 目录
-if [[ ! -d "${BUILD_DIR}" ]]; then
-    mkdir "${BUILD_DIR}"
-fi
 pushd "${BUILD_DIR}" > /dev/null
 
 # 下载 server.jar
