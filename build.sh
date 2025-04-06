@@ -23,9 +23,9 @@ if ! command -v "${NI_EXEC}" &> /dev/null; then
     "${GRAALVM_HOME}/bin/gu" install --no-progress native-image
 fi
 
-# 写入 eula.txt
-echo "Writing eula.txt with 'eula=true'"
-echo "eula=true" > "${SCRIPT_DIR}/eula.txt"
+# 在 BUILD_DIR 中写入 eula.txt
+echo "Writing eula.txt with 'eula=true' into ${BUILD_DIR}"
+echo "eula=true" > "${BUILD_DIR}/eula.txt"
 
 # 建立 build 目录
 if [[ ! -d "${BUILD_DIR}" ]]; then
@@ -90,7 +90,7 @@ pushd "${META_INF_PATH}" > /dev/null
     "${MAIN_CLASS}"
 mv "${BINARY_NAME}" "${SCRIPT_DIR}/${BINARY_NAME}"
 popd > /dev/null # 退出 META-INF 目录
-popd > /dev/null # 退出 build 目录
+popd > /dev/null # 退出 BUILD_DIR
 
 # 如果 upx 可用，则压缩生成的二进制文件
 if command -v upx &> /dev/null; then
