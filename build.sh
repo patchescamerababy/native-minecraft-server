@@ -12,6 +12,7 @@ BINARY_NAME="native-minecraft-server"
 NI_EXEC="${GRAALVM_HOME:-}/bin/native-image"
 readonly SERVER_JAR_DL SCRIPT_DIR BUILD_DIR JAR_PATH META_INF_PATH BINARY_NAME NI_EXEC
 
+# 检查 GraalVM 环境变量
 if [[ -z "${GRAALVM_HOME:-}" ]]; then
     echo "\$GRAALVM_HOME is not set. Please provide a GraalVM installation. Exiting..."
     exit 1
@@ -22,21 +23,29 @@ if ! command -v "${NI_EXEC}" &> /dev/null; then
     "${GRAALVM_HOME}/bin/gu" install --no-progress native-image
 fi
 
+# 写入 eula.txt
+echo "Writing eula.txt with 'eula=true'"
+echo "eula=true" > "${SCRIPT_DIR}/eula.txt"
+
+# 建立 build 目录
 if [[ ! -d "${BUILD_DIR}" ]]; then
     mkdir "${BUILD_DIR}"
 fi
 pushd "${BUILD_DIR}" > /dev/null
 
+# 下载 server.jar
 if [[ ! -f "${JAR_PATH}" ]]; then
     echo "Downloading Minecraft's server.jar..."
     curl --show-error --fail --location -o "${JAR_PATH}" "${SERVER_JAR_DL}"
 fi
 
+# 解压 META-INF 目录中的资源
 if [[ ! -d "${META_INF_PATH}" ]]; then
     echo "Extracting resources from Minecraft's server.jar..."
     unzip -qq "${JAR_PATH}" "META-INF/*" -d "."
 fi
 
+# 获取 classpath 配置
 if [[ ! -f "${META_INF_PATH}/classpath-joined" ]]; then
     echo "Unable to determine classpath. Exiting..."
     exit 1
@@ -44,12 +53,20 @@ fi
 CLASSPATH_JOINED=$(cat "${META_INF_PATH}/classpath-joined")
 readonly CLASSPATH_JOINED
 
+# 获取 main class 配置
 if [[ ! -f "${META_INF_PATH}/main-class" ]]; then
     echo "Unable to determine main class. Exiting..."
     exit 1
 fi
 MAIN_CLASS=$(cat "${META_INF_PATH}/main-class")
 readonly MAIN_CLASS
+
+# 使用 java 运行一次，以便生成反射配置数据
+echo "Running Minecraft server with native-image agent to generate configuration..."
+java -agentlib:native-image-agent=config-output-dir=./configuration -cp "${CLASSPATH_JOINED//;/:}" "${MAIN_CLASS}" || echo "Native-image agent run completed (expected to exit prematurely)"
+
+echo ""
+echo "Starting native-image build..."
 echo "${NI_EXEC}" --no-fallback \
     -H:ConfigurationFileDirectories="${SCRIPT_DIR}/configuration/" \
     --enable-url-protocols=https \
@@ -59,6 +76,8 @@ echo "${NI_EXEC}" --no-fallback \
     -H:Name="${BINARY_NAME}" \
     -cp "${CLASSPATH_JOINED//;/:}" \
     "${MAIN_CLASS}"
+
+# 进入 META-INF 目录进行构建
 pushd "${META_INF_PATH}" > /dev/null
 "${NI_EXEC}" --no-fallback \
     -H:ConfigurationFileDirectories="${SCRIPT_DIR}/configuration/" \
@@ -70,9 +89,10 @@ pushd "${META_INF_PATH}" > /dev/null
     -cp "${CLASSPATH_JOINED//;/:}" \
     "${MAIN_CLASS}"
 mv "${BINARY_NAME}" "${SCRIPT_DIR}/${BINARY_NAME}"
-popd > /dev/null # Exit $META_INF_PATH
-popd > /dev/null # Exit $BUILD_DIR
+popd > /dev/null # Exit META-INF
+popd > /dev/null # Exit build directory
 
+# 如果 upx 可用，则压缩生成的二进制文件
 if command -v upx &> /dev/null; then
     echo "Compressing the native Minecraft server with upx..."
     upx "${SCRIPT_DIR}/${BINARY_NAME}"
