@@ -24,8 +24,9 @@ if ! command -v "${NI_EXEC}" &> /dev/null; then
 fi
 
 # 在 BUILD_DIR 中写入 eula.txt
-echo "Writing eula.txt with 'eula=true' into ${BUILD_DIR}"
-echo "eula=true" > "${BUILD_DIR}/eula.txt"
+mkdir ${JAR_PATH}/eula.txt
+echo "Writing eula.txt with 'eula=true' into ${JAR_PATH}"
+echo "eula=true" > "${JAR_PATH}/eula.txt"
 
 # 建立 build 目录
 if [[ ! -d "${BUILD_DIR}" ]]; then
