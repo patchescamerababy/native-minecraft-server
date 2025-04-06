@@ -65,7 +65,7 @@ readonly MAIN_CLASS
 # 使用 java -jar 运行 server.jar以生成反射配置数据
 # 自动在20秒后输入 "stop" 退出服务器
 echo "Running server.jar with native-image agent to generate configuration..."
-( sleep 20; echo "stop" ) | java -agentlib:native-image-agent=config-output-dir=./configuration -jar "${JAR_PATH}" || echo "Native-image agent run completed (expected to exit)"
+( sleep 60; echo "stop" ) | java -agentlib:native-image-agent=config-output-dir=./configuration -jar "${JAR_PATH}" || echo "Native-image agent run completed (expected to exit)"
 
 echo ""
 echo "Starting native-image build..."
